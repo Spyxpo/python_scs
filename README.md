@@ -1,6 +1,6 @@
 # SCS Python SDK
 
-Python SDK for SCS (Spyxpo Cloud Services) - an open-source Backend-as-a-Service platform.
+Python SDK for SCS (Spyxpo Cloud Services)
 
 ## Installation
 
