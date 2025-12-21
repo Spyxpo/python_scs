@@ -79,17 +79,32 @@ Document database with query builder. SCS supports two powerful database options
 | Type | Name | Description | Best For |
 |------|------|-------------|----------|
 | `eazi` | **eaZI Database** | Document-based NoSQL with Firestore-like collections, documents, and subcollections | Development, prototyping, small to medium apps |
-| `mongodb` | **RelaDB** | Production-grade NoSQL database with relational-style views | Production, scalability, advanced queries |
+| `reladb` | **RelaDB** | Production-grade NoSQL database with relational-style views | Production, scalability, advanced queries |
 
-#### Configuration
+#### Initialize with eaZI (Default)
 
-```env
-# For eaZI Database (default) - No external dependencies
-DATABASE_TYPE=eazi
+```python
+from scs import SCS
 
-# For RelaDB (production-grade)
-DATABASE_TYPE=mongodb
-MONGODB_URI=mongodb://localhost:27017/scs_main
+# eaZI is the default database - no special configuration needed
+scs = SCS({
+    'project_id': 'your-project-id',
+    'api_key': 'your-api-key'
+    # database_type: 'eazi' is implicit
+})
+```
+
+#### Initialize with RelaDB (Production)
+
+```python
+from scs import SCS
+
+# Use RelaDB for production
+scs = SCS({
+    'project_id': 'your-project-id',
+    'api_key': 'your-api-key',
+    'database_type': 'reladb'  # Enable RelaDB
+})
 ```
 
 #### eaZI Database Features
@@ -102,47 +117,141 @@ MONGODB_URI=mongodb://localhost:27017/scs_main
 
 #### RelaDB Features
 
-- **Production-ready**: Built on MongoDB for reliability and performance
+- **Production-ready**: Built for reliability and performance
 - **Scalable**: Horizontal scaling and replication support
 - **Advanced queries**: Aggregation pipelines, complex filters
 - **Indexing**: Custom indexes for optimized performance
 - **Schema flexibility**: Dynamic schema with validation support
 - **Relational-style views**: Table view with columns and rows in the console
 
+#### Collection Operations
+
 ```python
-# Get collection reference
+# Get a collection reference
 users = scs.database.collection('users')
 
-# Add a document
-new_user = users.add({
-    'name': 'John Doe',
-    'email': 'john@example.com',
-    'age': 30
-})
+# List all collections
+collections = scs.database.list_collections()
 
-# Get all documents
-all_users = users.get()
+# Create a collection
+scs.database.create_collection('new_collection')
 
-# Query with filters
-adults = users.where('age', '>=', 18).where('status', '==', 'active').get()
-
-# Ordering and pagination
-recent = users.order_by('createdAt', 'desc').limit(10).skip(20).get()
-
-# Get specific document
-doc = users.doc('user123').get()
-
-# Update document
-users.doc('user123').update({'age': 31})
-
-# Delete document
-users.doc('user123').delete()
-
-# Subcollections
-posts = users.doc('user123').collection('posts').get()
+# Delete a collection
+scs.database.delete_collection('old_collection')
 ```
 
-Query operators: `==`, `!=`, `>`, `>=`, `<`, `<=`, `in`, `contains`
+#### Document Operations
+
+```python
+# Add document with auto-generated ID
+doc = scs.database.collection('users').add({
+    'name': 'John Doe',
+    'email': 'john@example.com',
+    'age': 30,
+    'tags': ['developer', 'python'],
+    'profile': {
+        'bio': 'Software developer',
+        'avatar': 'https://example.com/avatar.jpg'
+    }
+})
+print(f'Document ID: {doc["id"]}')
+
+# Set document with custom ID (creates or overwrites)
+scs.database.collection('users').doc('user-123').set({
+    'name': 'Jane Doe',
+    'email': 'jane@example.com'
+})
+
+# Get a single document
+user = scs.database.collection('users').doc('user-123').get()
+print(user)
+
+# Update document (partial update)
+scs.database.collection('users').doc('user-123').update({
+    'age': 31,
+    'profile.bio': 'Senior developer'
+})
+
+# Delete document
+scs.database.collection('users').doc('user-123').delete()
+```
+
+#### Query Operations
+
+```python
+# Simple query with single filter
+active_users = scs.database.collection('users') \
+    .where('status', '==', 'active') \
+    .get()
+
+# Multiple filters
+results = scs.database.collection('users') \
+    .where('age', '>=', 18) \
+    .where('status', '==', 'active') \
+    .get()
+
+# Ordering and pagination
+posts = scs.database.collection('posts') \
+    .where('published', '==', True) \
+    .order_by('created_at', 'desc') \
+    .limit(10) \
+    .skip(20) \
+    .get()
+
+# Using 'in' operator
+featured = scs.database.collection('posts') \
+    .where('category', 'in', ['tech', 'science', 'news']) \
+    .get()
+
+# Using 'contains' for array fields
+tagged = scs.database.collection('posts') \
+    .where('tags', 'contains', 'python') \
+    .get()
+```
+
+#### Query Operators
+
+| Operator | Description | Example |
+|----------|-------------|---------|
+| `==` | Equal to | `.where('status', '==', 'active')` |
+| `!=` | Not equal to | `.where('status', '!=', 'deleted')` |
+| `>` | Greater than | `.where('age', '>', 18)` |
+| `>=` | Greater than or equal | `.where('age', '>=', 18)` |
+| `<` | Less than | `.where('price', '<', 100)` |
+| `<=` | Less than or equal | `.where('price', '<=', 50)` |
+| `in` | Value in array | `.where('status', 'in', ['active', 'pending'])` |
+| `contains` | Array contains value | `.where('tags', 'contains', 'featured')` |
+
+#### Subcollections
+
+```python
+# Access a subcollection
+posts_ref = scs.database \
+    .collection('users') \
+    .doc('user_id') \
+    .collection('posts')
+
+# Add to subcollection
+post = posts_ref.add({
+    'title': 'My First Post',
+    'content': 'Hello World!',
+    'created_at': datetime.now().isoformat()
+})
+
+# Query subcollection
+user_posts = posts_ref \
+    .order_by('created_at', 'desc') \
+    .limit(5) \
+    .get()
+
+# Nested subcollections (e.g., users/user_id/posts/post_id/comments)
+comments_ref = scs.database \
+    .collection('users') \
+    .doc('user_id') \
+    .collection('posts') \
+    .doc('post_id') \
+    .collection('comments')
+```
 
 ### Storage
 
