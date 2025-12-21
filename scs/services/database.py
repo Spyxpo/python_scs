@@ -2,6 +2,23 @@
 SCS Database Service
 
 Provides Firestore-like document database functionality with query builder.
+
+SCS supports two database backends (configured server-side via DATABASE_TYPE):
+- **eaZI Database** (DATABASE_TYPE=eazi): File-based NoSQL, ideal for development
+- **RelaDB** (DATABASE_TYPE=mongodb): Production-grade NoSQL with advanced features
+
+The SDK API remains the same regardless of backend - switching databases requires
+no client-side code changes.
+
+Example:
+    # Get a collection reference
+    users = scs.database.collection('users')
+
+    # Add a document
+    doc = users.add({'name': 'John', 'email': 'john@example.com'})
+
+    # Query documents
+    adults = users.where('age', '>=', 18).order_by('name').get()
 """
 
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Union
