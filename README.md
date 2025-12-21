@@ -284,6 +284,102 @@ result = scs.functions.test('function-id', {'test': 'data'})
 logs = scs.functions.get_logs('function-id')
 ```
 
+### AI
+
+Chat, text completion, and image generation with local LLM models:
+
+```python
+# Chat with AI
+response = scs.ai.chat(
+    message="What is the capital of France?",
+    system_prompt="You are a helpful geography assistant."
+)
+print(response['content'])
+
+# Text completion
+response = scs.ai.complete(prompt="Once upon a time")
+print(response['content'])
+
+# Generate image
+response = scs.ai.generate_image(prompt="A sunset over mountains")
+print(response['imageUrl'])
+
+# List available models
+models = scs.ai.list_models()
+
+# Conversation management
+conversation = scs.ai.create_conversation(title="Geography Chat")
+scs.ai.get_conversation(conversation['conversationId'])
+scs.ai.delete_conversation(conversation['conversationId'])
+```
+
+### AI Agents
+
+Create and manage AI agents with custom instructions and tools:
+
+```python
+# Create an agent
+agent = scs.ai.create_agent(
+    name="Customer Support",
+    instructions="You are a helpful customer support assistant. Be polite and helpful.",
+    model="llama3.2",
+    temperature=0.7
+)
+print(f"Created agent: {agent['agentId']}")
+
+# List agents
+agents = scs.ai.list_agents()
+
+# Run the agent
+response = scs.ai.run_agent(
+    agent_id=agent['agentId'],
+    input="How do I reset my password?"
+)
+print(f"Agent: {response['output']}")
+print(f"Session: {response['sessionId']}")
+
+# Continue the conversation in the same session
+response = scs.ai.run_agent(
+    agent_id=agent['agentId'],
+    input="Thanks! What about enabling 2FA?",
+    session_id=response['sessionId']
+)
+
+# List agent sessions
+sessions = scs.ai.list_agent_sessions(agent['agentId'])
+
+# Get full session history
+session = scs.ai.get_agent_session(agent['agentId'], response['sessionId'])
+for msg in session['messages']:
+    print(f"{msg['role']}: {msg['content']}")
+
+# Update agent
+scs.ai.update_agent(
+    agent_id=agent['agentId'],
+    instructions="Updated instructions here",
+    temperature=0.5
+)
+
+# Define a tool for agents
+tool = scs.ai.define_tool(
+    name="get_weather",
+    description="Get weather for a location",
+    parameters={
+        "type": "object",
+        "properties": {
+            "location": {"type": "string", "description": "City name"}
+        }
+    }
+)
+
+# List tools
+tools = scs.ai.list_tools()
+
+# Delete agent and sessions
+scs.ai.delete_agent_session(agent['agentId'], response['sessionId'])
+scs.ai.delete_agent(agent['agentId'])
+```
+
 ## Configuration File
 
 Create an `scs-info.json` file:

@@ -1,5 +1,5 @@
 """
-AI Service - AI chat and text completion
+AI Service - AI chat, text completion, and AI agents
 """
 
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 
 class AIService:
     """
-    AI service for chat, text completion, and image generation.
+    AI service for chat, text completion, image generation, and AI agents.
 
     Usage:
         # Chat
@@ -21,6 +21,15 @@ class AIService:
 
         # Generate image
         response = scs.ai.generate_image(prompt="A sunset over mountains")
+
+        # Create an agent
+        agent = scs.ai.create_agent(
+            name="Assistant",
+            instructions="You are a helpful assistant."
+        )
+
+        # Run agent
+        response = scs.ai.run_agent(agent_id="...", input="Hello!")
     """
 
     def __init__(self, client: "SCS"):
@@ -231,3 +240,315 @@ class AIService:
         """
         response = self._client.request("/api/ai/stats")
         return response.get("stats", response)
+
+    # ==================== AI AGENTS ====================
+
+    def create_agent(
+        self,
+        name: str,
+        instructions: Optional[str] = None,
+        description: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[List[str]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Create a new AI agent.
+
+        Args:
+            name: Agent name
+            instructions: System instructions for the agent
+            description: Agent description
+            model: AI model to use
+            tools: List of tool IDs the agent can use
+            temperature: Temperature (0-1)
+            max_tokens: Maximum tokens for responses
+            metadata: Additional metadata
+
+        Returns:
+            Created agent
+        """
+        body: Dict[str, Any] = {"name": name}
+        if instructions:
+            body["instructions"] = instructions
+        if description:
+            body["description"] = description
+        if model:
+            body["model"] = model
+        if tools:
+            body["tools"] = tools
+        if temperature is not None:
+            body["temperature"] = temperature
+        if max_tokens:
+            body["maxTokens"] = max_tokens
+        if metadata:
+            body["metadata"] = metadata
+
+        response = self._client.request("/api/ai/agents", method="POST", body=body)
+        return response.get("agent", response)
+
+    def list_agents(
+        self,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+        status: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        List all agents.
+
+        Args:
+            limit: Maximum number of agents
+            offset: Number to skip
+            status: Filter by status (active, inactive)
+
+        Returns:
+            List of agents
+        """
+        params = {}
+        if limit:
+            params["limit"] = limit
+        if offset:
+            params["offset"] = offset
+        if status:
+            params["status"] = status
+
+        response = self._client.request("/api/ai/agents", params=params)
+        return response.get("agents", [])
+
+    def get_agent(self, agent_id: str) -> Dict[str, Any]:
+        """
+        Get an agent by ID.
+
+        Args:
+            agent_id: Agent ID
+
+        Returns:
+            Agent details
+        """
+        response = self._client.request(f"/api/ai/agents/{agent_id}")
+        return response.get("agent", response)
+
+    def update_agent(
+        self,
+        agent_id: str,
+        name: Optional[str] = None,
+        instructions: Optional[str] = None,
+        description: Optional[str] = None,
+        model: Optional[str] = None,
+        tools: Optional[List[str]] = None,
+        temperature: Optional[float] = None,
+        max_tokens: Optional[int] = None,
+        metadata: Optional[Dict[str, Any]] = None,
+        status: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Update an agent.
+
+        Args:
+            agent_id: Agent ID
+            name: Agent name
+            instructions: System instructions
+            description: Agent description
+            model: AI model to use
+            tools: List of tool IDs
+            temperature: Temperature (0-1)
+            max_tokens: Maximum tokens
+            metadata: Additional metadata
+            status: Agent status (active, inactive)
+
+        Returns:
+            Updated agent
+        """
+        body: Dict[str, Any] = {}
+        if name:
+            body["name"] = name
+        if instructions:
+            body["instructions"] = instructions
+        if description:
+            body["description"] = description
+        if model:
+            body["model"] = model
+        if tools is not None:
+            body["tools"] = tools
+        if temperature is not None:
+            body["temperature"] = temperature
+        if max_tokens:
+            body["maxTokens"] = max_tokens
+        if metadata:
+            body["metadata"] = metadata
+        if status:
+            body["status"] = status
+
+        response = self._client.request(
+            f"/api/ai/agents/{agent_id}",
+            method="PUT",
+            body=body
+        )
+        return response.get("agent", response)
+
+    def delete_agent(self, agent_id: str) -> bool:
+        """
+        Delete an agent.
+
+        Args:
+            agent_id: Agent ID
+
+        Returns:
+            True if successful
+        """
+        self._client.request(f"/api/ai/agents/{agent_id}", method="DELETE")
+        return True
+
+    def run_agent(
+        self,
+        agent_id: str,
+        input: str,
+        session_id: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Run an agent with input.
+
+        Args:
+            agent_id: Agent ID
+            input: User input message
+            session_id: Session ID for conversation continuity
+            context: Additional context data
+
+        Returns:
+            Agent response with output and session ID
+        """
+        body: Dict[str, Any] = {"input": input}
+        if session_id:
+            body["sessionId"] = session_id
+        if context:
+            body["context"] = context
+
+        return self._client.request(
+            f"/api/ai/agents/{agent_id}/run",
+            method="POST",
+            body=body
+        )
+
+    def list_agent_sessions(
+        self,
+        agent_id: str,
+        limit: Optional[int] = None,
+        offset: Optional[int] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        List sessions for an agent.
+
+        Args:
+            agent_id: Agent ID
+            limit: Maximum number of sessions
+            offset: Number to skip
+
+        Returns:
+            List of sessions
+        """
+        params = {}
+        if limit:
+            params["limit"] = limit
+        if offset:
+            params["offset"] = offset
+
+        response = self._client.request(
+            f"/api/ai/agents/{agent_id}/sessions",
+            params=params
+        )
+        return response.get("sessions", [])
+
+    def get_agent_session(
+        self,
+        agent_id: str,
+        session_id: str,
+    ) -> Dict[str, Any]:
+        """
+        Get an agent session with full message history.
+
+        Args:
+            agent_id: Agent ID
+            session_id: Session ID
+
+        Returns:
+            Session with messages
+        """
+        response = self._client.request(
+            f"/api/ai/agents/{agent_id}/sessions/{session_id}"
+        )
+        return response.get("session", response)
+
+    def delete_agent_session(
+        self,
+        agent_id: str,
+        session_id: str,
+    ) -> bool:
+        """
+        Delete an agent session.
+
+        Args:
+            agent_id: Agent ID
+            session_id: Session ID
+
+        Returns:
+            True if successful
+        """
+        self._client.request(
+            f"/api/ai/agents/{agent_id}/sessions/{session_id}",
+            method="DELETE"
+        )
+        return True
+
+    # Agent Tools
+
+    def define_tool(
+        self,
+        name: str,
+        description: Optional[str] = None,
+        parameters: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
+        """
+        Define a tool that agents can use.
+
+        Args:
+            name: Tool name
+            description: Tool description
+            parameters: JSON schema for tool parameters
+
+        Returns:
+            Created tool
+        """
+        body: Dict[str, Any] = {"name": name}
+        if description:
+            body["description"] = description
+        if parameters:
+            body["parameters"] = parameters
+
+        response = self._client.request("/api/ai/tools", method="POST", body=body)
+        return response.get("tool", response)
+
+    def list_tools(self) -> List[Dict[str, Any]]:
+        """
+        List all defined tools.
+
+        Returns:
+            List of tools
+        """
+        response = self._client.request("/api/ai/tools")
+        return response.get("tools", [])
+
+    def delete_tool(self, tool_id: str) -> bool:
+        """
+        Delete a tool.
+
+        Args:
+            tool_id: Tool ID
+
+        Returns:
+            True if successful
+        """
+        self._client.request(f"/api/ai/tools/{tool_id}", method="DELETE")
+        return True
