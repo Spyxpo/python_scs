@@ -75,7 +75,7 @@ scs.auth.logout()
 Document database with query builder. SCS supports two database types:
 
 - **eaZI**: Document-based NoSQL with Firestore-like collections, documents, and subcollections (default)
-- **MongoDB**: Relational-style database with tables, columns, and rows
+- **RelaDB**: Relational-style database with tables, columns, and rows
 
 Configure the backend database type via `DATABASE_TYPE` environment variable (`eazi` or `mongodb`). See the main SCS documentation for details.
 
