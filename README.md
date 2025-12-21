@@ -70,6 +70,668 @@ scs.auth.change_password(
 scs.auth.logout()
 ```
 
+#### OAuth and Social Sign-In
+
+SCS supports multiple OAuth providers for seamless social authentication. Each provider follows a similar pattern but requires different credentials obtained from their respective SDKs.
+
+##### Google Sign-In
+
+Authenticate users with their Google account. Requires the Google Sign-In SDK on the client.
+
+```python
+# Sign in with Google
+user = scs.auth.sign_in_with_google(
+    id_token='google-id-token',        # Required: ID token from Google Sign-In
+    access_token='google-access-token'  # Optional: Access token for additional scopes
+)
+
+print(f"User ID: {user['uid']}")
+print(f"Email: {user['email']}")
+print(f"Display Name: {user['displayName']}")
+print(f"Photo URL: {user['photoURL']}")
+print(f"Provider: {user['providerId']}")  # 'google'
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `id_token` | str | Yes | The ID token obtained from Google Sign-In SDK |
+| `access_token` | str | No | Access token for additional Google API scopes |
+
+**Returns:** `dict` with user data and token
+
+**Example with Google OAuth Library:**
+
+```python
+from google.oauth2 import id_token
+from google.auth.transport import requests
+
+# Verify and get token on server side
+def verify_google_token(token):
+    try:
+        idinfo = id_token.verify_oauth2_token(
+            token, requests.Request(), GOOGLE_CLIENT_ID
+        )
+        return idinfo
+    except ValueError:
+        return None
+
+# Sign in with the token
+user = scs.auth.sign_in_with_google(id_token=google_token)
+```
+
+##### Facebook Sign-In
+
+Authenticate users with their Facebook account.
+
+```python
+# Sign in with Facebook
+user = scs.auth.sign_in_with_facebook(
+    access_token='facebook-access-token'  # Required: Access token from Facebook Login
+)
+
+print(f"User: {user['displayName']}")
+print(f"Email: {user['email']}")  # May be None if user didn't grant email permission
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `access_token` | str | Yes | Access token from Facebook Login SDK |
+
+**Example with Facebook SDK:**
+
+```python
+# After getting access token from Facebook SDK on client
+def facebook_login(access_token):
+    try:
+        user = scs.auth.sign_in_with_facebook(access_token=access_token)
+        return user
+    except Exception as e:
+        print(f"Facebook login failed: {e}")
+        return None
+```
+
+##### Apple Sign-In
+
+Authenticate users with their Apple ID. Ideal for iOS apps and required for apps with social login on the App Store.
+
+```python
+# Sign in with Apple
+user = scs.auth.sign_in_with_apple(
+    identity_token='apple-identity-token',      # Required: Identity token from Sign in with Apple
+    authorization_code='apple-auth-code',       # Optional: Authorization code for server verification
+    full_name='John Doe'                         # Optional: User's name (only available on first sign-in)
+)
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `identity_token` | str | Yes | JWT identity token from Sign in with Apple |
+| `authorization_code` | str | No | Authorization code for additional verification |
+| `full_name` | str | No | User's full name (Apple only provides this on first sign-in) |
+
+**Important Notes:**
+
+- Apple only provides the user's name on the **first sign-in**. Store it immediately.
+- Users can choose to hide their email (Apple provides a relay email).
+- Required for apps using social login on iOS/macOS.
+
+##### GitHub Sign-In
+
+Authenticate users with their GitHub account. Popular for developer-focused applications.
+
+```python
+# Sign in with GitHub
+user = scs.auth.sign_in_with_github(
+    code='github-oauth-code',                     # Required: OAuth authorization code
+    redirect_uri='https://yourapp.com/callback'   # Optional: Must match OAuth app settings
+)
+
+print(f"GitHub username: {user['displayName']}")
+print(f"Email: {user['email']}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `code` | str | Yes | OAuth authorization code from GitHub OAuth flow |
+| `redirect_uri` | str | No | Redirect URI (must match your GitHub OAuth App settings) |
+
+**OAuth Flow Example (Flask):**
+
+```python
+from flask import Flask, redirect, request
+import requests
+
+app = Flask(__name__)
+GITHUB_CLIENT_ID = 'your-client-id'
+GITHUB_CLIENT_SECRET = 'your-client-secret'
+
+@app.route('/login/github')
+def github_login():
+    return redirect(
+        f'https://github.com/login/oauth/authorize'
+        f'?client_id={GITHUB_CLIENT_ID}'
+        f'&redirect_uri=https://yourapp.com/callback'
+        f'&scope=read:user user:email'
+    )
+
+@app.route('/callback')
+def github_callback():
+    code = request.args.get('code')
+    if code:
+        user = scs.auth.sign_in_with_github(
+            code=code,
+            redirect_uri='https://yourapp.com/callback'
+        )
+        return f"Welcome, {user['displayName']}!"
+    return "Login failed"
+```
+
+##### Twitter/X Sign-In
+
+Authenticate users with their Twitter/X account using OAuth 1.0a.
+
+```python
+# Sign in with Twitter/X
+user = scs.auth.sign_in_with_twitter(
+    oauth_token='twitter-oauth-token',            # Required: OAuth token
+    oauth_token_secret='twitter-oauth-secret'     # Required: OAuth token secret
+)
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `oauth_token` | str | Yes | OAuth token from Twitter authentication |
+| `oauth_token_secret` | str | Yes | OAuth token secret from Twitter authentication |
+
+**Note:** Twitter uses OAuth 1.0a which requires a more complex flow. Consider using a library like `tweepy` or `python-twitter`.
+
+##### Microsoft Sign-In
+
+Authenticate users with their Microsoft account (personal, work, or school accounts).
+
+```python
+# Sign in with Microsoft
+user = scs.auth.sign_in_with_microsoft(
+    access_token='microsoft-access-token',   # Required: Access token from MSAL
+    id_token='microsoft-id-token'            # Optional: ID token for additional claims
+)
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `access_token` | str | Yes | Access token from Microsoft Authentication Library (MSAL) |
+| `id_token` | str | No | ID token for additional user claims |
+
+**Example with MSAL Python:**
+
+```python
+from msal import ConfidentialClientApplication
+
+app = ConfidentialClientApplication(
+    client_id="your-client-id",
+    authority="https://login.microsoftonline.com/common",
+    client_credential="your-client-secret"
+)
+
+# After getting tokens from authorization code flow
+result = app.acquire_token_by_authorization_code(
+    code,
+    scopes=["User.Read"],
+    redirect_uri="https://yourapp.com/callback"
+)
+
+if "access_token" in result:
+    user = scs.auth.sign_in_with_microsoft(
+        access_token=result["access_token"],
+        id_token=result.get("id_token")
+    )
+```
+
+#### Anonymous Authentication
+
+Allow users to use your app without creating an account. Anonymous accounts can later be upgraded to permanent accounts by linking a provider.
+
+```python
+# Sign in anonymously (creates a temporary account)
+user = scs.auth.sign_in_anonymously(
+    custom_data={'referrer': 'landing-page', 'campaign': 'summer-sale'}  # optional
+)
+
+print(f"Anonymous user ID: {user['uid']}")
+print(f"Is anonymous: {user['isAnonymous']}")  # True
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `custom_data` | dict | No | Custom data to store with the anonymous user for analytics |
+
+**Use Cases:**
+
+- Allow users to try your app before signing up
+- Guest checkout in e-commerce
+- Save user progress/preferences before account creation
+- A/B testing with user tracking
+
+**Converting Anonymous to Permanent Account:**
+
+```python
+# User decides to create a permanent account
+# Link their anonymous account to a provider
+try:
+    user = scs.auth.link_provider('google', {
+        'idToken': 'google-id-token'
+    })
+
+    print("Account upgraded! User data preserved.")
+    print(f"Is anonymous: {user['isAnonymous']}")  # False
+except Exception as e:
+    if 'credential-already-in-use' in str(e):
+        # This Google account is already linked to another user
+        print("This account is already registered. Please sign in instead.")
+    else:
+        raise
+```
+
+#### Phone Number Authentication
+
+Two-step authentication flow using SMS verification codes.
+
+```python
+# Step 1: Send verification code to phone
+result = scs.auth.send_phone_verification_code(
+    phone_number='+1234567890',            # Required: E.164 format
+    recaptcha_token='recaptcha-token'      # Optional: For bot protection
+)
+verification_id = result['verificationId']
+print(f"Verification ID: {verification_id}")
+# Store this ID - you'll need it in step 2
+
+# Step 2: User enters the code they received
+user = scs.auth.sign_in_with_phone_number(
+    verification_id=verification_id,   # The ID from step 1
+    code='123456'                      # 6-digit code from SMS
+)
+
+print(f"Phone verified: {user['phoneNumber']}")
+```
+
+**send_phone_verification_code Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `phone_number` | str | Yes | Phone number in E.164 format (e.g., +1234567890) |
+| `recaptcha_token` | str | No | reCAPTCHA token for abuse prevention |
+
+**sign_in_with_phone_number Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `verification_id` | str | Yes | Verification ID from send_phone_verification_code |
+| `code` | str | Yes | 6-digit verification code from SMS |
+
+**Complete Flow Example:**
+
+```python
+def sign_in_with_phone(phone_number: str, get_code_callback) -> dict:
+    """
+    Sign in with phone number.
+
+    Args:
+        phone_number: Phone number in E.164 format
+        get_code_callback: Function that prompts user for the SMS code
+
+    Returns:
+        User dict on success
+    """
+    try:
+        # Step 1: Send code
+        result = scs.auth.send_phone_verification_code(
+            phone_number=phone_number
+        )
+        verification_id = result['verificationId']
+
+        # Get code from user (your UI implementation)
+        code = get_code_callback()
+
+        # Step 2: Verify code
+        user = scs.auth.sign_in_with_phone_number(
+            verification_id=verification_id,
+            code=code
+        )
+
+        return user
+
+    except Exception as e:
+        error_msg = str(e).lower()
+        if 'invalid-phone-number' in error_msg:
+            raise ValueError('Invalid phone number format. Use E.164 format (+1234567890)')
+        elif 'too-many-requests' in error_msg:
+            raise ValueError('Too many attempts. Please try again later.')
+        elif 'invalid-verification-code' in error_msg:
+            raise ValueError('Invalid verification code. Please try again.')
+        elif 'code-expired' in error_msg:
+            raise ValueError('Code expired. Please request a new one.')
+        else:
+            raise
+```
+
+#### Custom Token Authentication
+
+Sign in using a JWT token generated by your own backend. Useful for migrating users from another system or integrating with custom authentication.
+
+```python
+# Sign in with a custom token (generated by your backend)
+user = scs.auth.sign_in_with_custom_token('your-custom-jwt-token')
+
+print(f"Signed in user: {user['uid']}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `token` | str | Yes | JWT token generated by your backend |
+
+**Backend Token Generation Example:**
+
+```python
+import jwt
+import time
+import os
+
+def create_custom_token(uid: str, claims: dict = None) -> str:
+    """
+    Create a custom authentication token.
+
+    Args:
+        uid: Unique user identifier
+        claims: Optional custom claims to include
+
+    Returns:
+        JWT token string
+    """
+    payload = {
+        'uid': uid,
+        'claims': claims or {},
+        'iat': int(time.time()),
+        'exp': int(time.time()) + 3600  # 1 hour
+    }
+
+    return jwt.encode(
+        payload,
+        os.environ['SCS_SECRET_KEY'],
+        algorithm='HS256'
+    )
+
+# Generate token for a user
+custom_token = create_custom_token('user-123', {'role': 'admin'})
+# Send this token to the client for sign-in
+```
+
+**Use Cases:**
+
+- Migrating users from another authentication system
+- Server-side user creation with immediate client sign-in
+- Integration with enterprise SSO systems (SAML, LDAP)
+- Machine-to-machine authentication
+
+#### Account Linking
+
+Link multiple authentication providers to a single account. Users can sign in with any linked provider.
+
+```python
+# Link a provider to current account
+user = scs.auth.link_provider('facebook', {
+    'accessToken': 'facebook-access-token'
+})
+
+print(f"Linked providers: {user['providerData']}")
+# [{'providerId': 'password'}, {'providerId': 'google'}, {'providerId': 'facebook'}]
+
+# Unlink a provider from current account
+user = scs.auth.unlink_provider('facebook')
+print(f"Remaining providers: {user['providerData']}")
+
+# Get available sign-in methods for an email
+result = scs.auth.fetch_sign_in_methods_for_email('user@example.com')
+print(f"Available methods: {result['methods']}")
+# ['password', 'google', 'facebook']
+```
+
+**link_provider Parameters:**
+
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `provider` | str | Yes | Provider name: 'google', 'facebook', 'apple', 'github', 'twitter', 'microsoft' |
+| `credentials` | dict | Yes | Provider-specific credentials (tokens) |
+
+**Supported Providers and Credentials:**
+
+| Provider | Required Credentials |
+|----------|---------------------|
+| `google` | `{'idToken': '...', 'accessToken': '...'}` (accessToken optional) |
+| `facebook` | `{'accessToken': '...'}` |
+| `apple` | `{'identityToken': '...', 'authorizationCode': '...', 'fullName': '...'}` |
+| `github` | `{'code': '...', 'redirectUri': '...'}` |
+| `twitter` | `{'oauthToken': '...', 'oauthTokenSecret': '...'}` |
+| `microsoft` | `{'accessToken': '...', 'idToken': '...'}` |
+
+**Complete Account Linking Flow:**
+
+```python
+def can_link_provider(email: str, provider: str) -> bool:
+    """Check if a provider can be linked to an account."""
+    result = scs.auth.fetch_sign_in_methods_for_email(email)
+    methods = result.get('methods', [])
+
+    if provider in methods:
+        raise ValueError(f"{provider} is already linked to this account")
+
+    return True
+
+def link_google_account(google_id_token: str) -> dict:
+    """Link Google to the current user's account."""
+    try:
+        # Verify user is signed in
+        current_user = scs.auth.get_current_user()
+        if not current_user:
+            raise ValueError('Must be signed in to link accounts')
+
+        # Link the provider
+        user = scs.auth.link_provider('google', {
+            'idToken': google_id_token
+        })
+
+        print('Successfully linked Google account')
+        return user
+
+    except Exception as e:
+        error_msg = str(e).lower()
+        if 'credential-already-in-use' in error_msg:
+            print('This Google account is already linked to another user')
+        elif 'provider-already-linked' in error_msg:
+            print('Google is already linked to this account')
+        raise
+```
+
+#### Password Reset & Email Verification
+
+Handle password recovery and email verification flows.
+
+```python
+# Send password reset email
+scs.auth.send_password_reset_email('user@example.com')
+print("Password reset email sent")
+
+# Confirm password reset (user clicks link in email, you extract the code)
+scs.auth.confirm_password_reset(
+    code='reset-code-from-email',       # Code from the reset link
+    new_password='newSecurePassword123'  # User's new password
+)
+print("Password successfully reset")
+
+# Send email verification to current user
+scs.auth.send_email_verification()
+print("Verification email sent")
+
+# Verify email with code (user clicks link, you extract the code)
+scs.auth.verify_email('verification-code')
+print("Email verified")
+```
+
+**Error Handling:**
+
+```python
+def reset_password(email: str) -> dict:
+    """Send password reset email with error handling."""
+    try:
+        scs.auth.send_password_reset_email(email)
+        return {'success': True, 'message': 'Reset email sent'}
+    except Exception as e:
+        error_msg = str(e).lower()
+        if 'user-not-found' in error_msg:
+            # Don't reveal if user exists for security
+            return {'success': True, 'message': 'If this email exists, a reset link was sent'}
+        elif 'too-many-requests' in error_msg:
+            return {'success': False, 'message': 'Too many attempts. Please try later.'}
+        else:
+            raise
+
+def confirm_reset(code: str, new_password: str) -> dict:
+    """Confirm password reset with validation."""
+    # Validate password strength
+    if len(new_password) < 8:
+        raise ValueError('Password must be at least 8 characters')
+
+    try:
+        scs.auth.confirm_password_reset(code=code, new_password=new_password)
+        return {'success': True}
+    except Exception as e:
+        error_msg = str(e).lower()
+        if 'expired-action-code' in error_msg:
+            return {'success': False, 'message': 'Reset link expired. Please request a new one.'}
+        elif 'invalid-action-code' in error_msg:
+            return {'success': False, 'message': 'Invalid reset link.'}
+        elif 'weak-password' in error_msg:
+            return {'success': False, 'message': 'Password is too weak.'}
+        else:
+            raise
+```
+
+#### Authentication State Management
+
+Manage user sessions and authentication state.
+
+```python
+# Check if user is logged in
+is_logged_in = scs.auth.is_logged_in
+print(f"Is logged in: {is_logged_in}")
+
+# Get current user (from cache)
+cached_user = scs.auth.current_user
+
+# Get current user (fresh from server)
+user = scs.auth.get_current_user()
+
+# Refresh user data
+refreshed_user = scs.auth.reload()
+
+# Get the current auth token
+token = scs.auth.token
+```
+
+#### Complete Authentication Example
+
+```python
+from scs import SCS, AuthenticationError
+
+class AuthService:
+    def __init__(self):
+        self.scs = SCS({
+            'api_key': 'your-api-key',
+            'project_id': 'your-project-id',
+            'base_url': 'https://your-scs-instance.com'
+        })
+
+    def register(self, email: str, password: str, display_name: str) -> dict:
+        """Register a new user with email verification."""
+        user = self.scs.auth.register(
+            email=email,
+            password=password,
+            display_name=display_name
+        )
+
+        # Send verification email
+        self.scs.auth.send_email_verification()
+
+        return user
+
+    def login(self, email: str, password: str) -> dict:
+        """Login with email and password."""
+        return self.scs.auth.login(email=email, password=password)
+
+    def social_login(self, provider: str, credentials: dict) -> dict:
+        """Login with any social provider."""
+        methods = {
+            'google': lambda: self.scs.auth.sign_in_with_google(**credentials),
+            'facebook': lambda: self.scs.auth.sign_in_with_facebook(**credentials),
+            'apple': lambda: self.scs.auth.sign_in_with_apple(**credentials),
+            'github': lambda: self.scs.auth.sign_in_with_github(**credentials),
+            'twitter': lambda: self.scs.auth.sign_in_with_twitter(**credentials),
+            'microsoft': lambda: self.scs.auth.sign_in_with_microsoft(**credentials)
+        }
+
+        if provider not in methods:
+            raise ValueError(f"Unknown provider: {provider}")
+
+        return methods[provider]()
+
+    def continue_as_guest(self, custom_data: dict = None) -> dict:
+        """Sign in anonymously for guest access."""
+        return self.scs.auth.sign_in_anonymously(custom_data=custom_data or {})
+
+    def upgrade_guest_account(self, provider: str, credentials: dict) -> dict:
+        """Upgrade anonymous account to permanent."""
+        user = self.scs.auth.get_current_user()
+        if not user or not user.get('isAnonymous'):
+            raise ValueError('Current user is not anonymous')
+
+        return self.scs.auth.link_provider(provider, credentials)
+
+    def logout(self):
+        """Sign out the current user."""
+        self.scs.auth.logout()
+
+
+# Usage
+auth = AuthService()
+
+# Register new user
+user = auth.register('user@example.com', 'password123', 'John Doe')
+
+# Or sign in with Google
+google_user = auth.social_login('google', {'id_token': 'xxx'})
+
+# Or continue as guest and upgrade later
+guest = auth.continue_as_guest({'source': 'homepage'})
+# ... user decides to create account ...
+upgraded = auth.upgrade_guest_account('google', {'idToken': 'xxx'})
+```
+
 ### Database
 
 Document database with query builder. SCS supports two powerful database options:
