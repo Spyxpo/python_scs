@@ -72,12 +72,12 @@ scs.auth.logout()
 
 ### Database
 
-Document database with query builder. The backend supports multiple database types:
+Document database with query builder. SCS supports two database types:
 
-- **NeDB**: File-based NoSQL (default, for development)
-- **MongoDB**: Production-grade NoSQL database
+- **eaZI**: Document-based NoSQL with Firestore-like collections, documents, and subcollections (default)
+- **MongoDB**: Relational-style database with tables, columns, and rows
 
-Configure the backend database type via `DATABASE_TYPE` environment variable. See the main SCS documentation for details.
+Configure the backend database type via `DATABASE_TYPE` environment variable (`eazi` or `mongodb`). See the main SCS documentation for details.
 
 ```python
 # Get collection reference
