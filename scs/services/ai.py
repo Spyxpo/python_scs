@@ -552,3 +552,42 @@ class AIService:
         """
         self._client.request(f"/api/ai/tools/{tool_id}", method="DELETE")
         return True
+
+    # ==================== TTS & STT ====================
+
+    def text_to_speech(
+        self,
+        text: str,
+        voice: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Convert text to speech.
+
+        Args:
+            text: Text to convert to speech
+            voice: Voice preset (optional, defaults to 'v2/en_speaker_6')
+
+        Returns:
+            TTS response with base64 encoded audio data
+        """
+        body: Dict[str, Any] = {"text": text}
+        if voice:
+            body["voice"] = voice
+
+        return self._client.request("/api/ai/tts", method="POST", body=body)
+
+    def speech_to_text(
+        self,
+        audio: str,
+    ) -> Dict[str, Any]:
+        """
+        Convert speech to text.
+
+        Args:
+            audio: Base64 encoded audio data
+
+        Returns:
+            STT response with transcribed text
+        """
+        body = {"audio": audio}
+        return self._client.request("/api/ai/stt", method="POST", body=body)
