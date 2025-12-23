@@ -69,6 +69,7 @@ class SCS:
         self._functions: Optional["FunctionsService"] = None
         self._ai: Optional["AIService"] = None
         self._ml: Optional["MLService"] = None
+        self._calls: Optional["CallService"] = None
 
         # HTTP session for connection pooling
         self._session = requests.Session()
@@ -394,6 +395,14 @@ class SCS:
             from .services.ml import MLService
             self._ml = MLService(self)
         return self._ml
+
+    @property
+    def calls(self) -> "CallService":
+        """Get the calls service for voice/video calls, group calls, and live streaming."""
+        if self._calls is None:
+            from .services.calls import CallService
+            self._calls = CallService(self)
+        return self._calls
 
     def close(self) -> None:
         """Close the HTTP session and cleanup resources."""
