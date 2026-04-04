@@ -591,3 +591,54 @@ class AIService:
         """
         body = {"audio": audio}
         return self._client.request("/api/ai/stt", method="POST", body=body)
+
+    # ==================== PROVIDER SETTINGS ====================
+
+    def get_provider_settings(self) -> Dict[str, Any]:
+        """
+        Get the LLM provider configured for this project.
+
+        Supported providers: huggingface, openai, groq, anthropic, google,
+            together, mistral, openrouter, custom
+
+        Returns:
+            Dict with 'settings' (current config) and 'supportedProviders' list.
+            Note: the API key is never returned — only 'hasApiKey' boolean.
+        """
+        return self._client.request("/api/ai/settings/provider")
+
+    def update_provider_settings(
+        self,
+        provider: str,
+        api_key: str,
+        model: Optional[str] = None,
+        base_url: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Configure which LLM provider this project uses.
+
+        Args:
+            provider:  Provider ID — one of: huggingface, openai, groq,
+                       anthropic, google, together, mistral, openrouter, custom
+            api_key:   API key or token for the provider
+                       (Hugging Face: hf_xxx from huggingface.co/settings/tokens)
+            model:     Default model ID to use (optional, provider default used if omitted)
+            base_url:  Custom base URL — only needed when provider='custom'
+
+        Returns:
+            Dict with 'message' confirming the update.
+
+        Example::
+
+            scs.ai.update_provider_settings(
+                provider="huggingface",
+                api_key="hf_...",
+                model="meta-llama/Llama-3.2-3B-Instruct",
+            )
+        """
+        body: Dict[str, Any] = {"provider": provider, "apiKey": api_key}
+        if model:
+            body["model"] = model
+        if base_url:
+            body["baseUrl"] = base_url
+        return self._client.request("/api/ai/settings/provider", method="PUT", body=body)
