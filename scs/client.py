@@ -404,6 +404,72 @@ class SCS:
             self._calls = CallService(self)
         return self._calls
 
+    # ------------------------------------------------------------------
+    # New service properties — SQL, Mail, Queue, Cron, Vault, Analytics,
+    # Monitor, Search, CDN, SMS, Access, Pipeline, Experiments, Inbox,
+    # Links, Crash, Perf, DNS, Translate, Warehouse, Artifact, Billing,
+    # Workflows, IoT, Firewall.
+    # ------------------------------------------------------------------
+
+    def _new_svc(self, attr: str, cls_name: str):
+        if not hasattr(self, "_new_services"):
+            self._new_services: Dict[str, Any] = {}
+        if attr not in self._new_services:
+            from .services import new_services as ns
+            self._new_services[attr] = getattr(ns, cls_name)(self)
+        return self._new_services[attr]
+
+    @property
+    def sql(self):         return self._new_svc("sql", "SqlService")
+    @property
+    def mail(self):        return self._new_svc("mail", "MailService")
+    @property
+    def queue(self):       return self._new_svc("queue", "QueueService")
+    @property
+    def cron(self):        return self._new_svc("cron", "CronService")
+    @property
+    def vault(self):       return self._new_svc("vault", "VaultService")
+    @property
+    def analytics(self):   return self._new_svc("analytics", "AnalyticsService")
+    @property
+    def monitor(self):     return self._new_svc("monitor", "MonitorService")
+    @property
+    def search(self):      return self._new_svc("search", "SearchService")
+    @property
+    def cdn(self):         return self._new_svc("cdn", "CdnService")
+    @property
+    def sms(self):         return self._new_svc("sms", "SmsService")
+    @property
+    def access(self):      return self._new_svc("access", "AccessService")
+    @property
+    def pipeline(self):    return self._new_svc("pipeline", "PipelineService")
+    @property
+    def experiments(self): return self._new_svc("experiments", "ExperimentsService")
+    @property
+    def inbox(self):       return self._new_svc("inbox", "InboxService")
+    @property
+    def links(self):       return self._new_svc("links", "LinksService")
+    @property
+    def crash(self):       return self._new_svc("crash", "CrashService")
+    @property
+    def perf(self):        return self._new_svc("perf", "PerfService")
+    @property
+    def dns(self):         return self._new_svc("dns", "DnsService")
+    @property
+    def translate(self):   return self._new_svc("translate", "TranslateService")
+    @property
+    def warehouse(self):   return self._new_svc("warehouse", "WarehouseService")
+    @property
+    def artifact(self):    return self._new_svc("artifact", "ArtifactService")
+    @property
+    def billing(self):     return self._new_svc("billing", "BillingService")
+    @property
+    def workflows(self):   return self._new_svc("workflows", "WorkflowsService")
+    @property
+    def iot(self):         return self._new_svc("iot", "IotService")
+    @property
+    def firewall(self):    return self._new_svc("firewall", "FirewallService")
+
     def close(self) -> None:
         """Close the HTTP session and cleanup resources."""
         if self._realtime:
